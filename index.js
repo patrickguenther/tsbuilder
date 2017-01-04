@@ -5,7 +5,6 @@ var tsify = require("tsify");
 var gutil = require("gulp-util");
 var watchify = require("watchify");
 var ts = require("gulp-typescript");
-var tsProject = ts.createProject("src/tsconfig.json");
 
 module.exports = PgBuild;
 
