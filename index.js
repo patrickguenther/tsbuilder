@@ -1,4 +1,3 @@
-var gulp = require("gulp");
 var browserify = require("browserify");
 var source = require("vinyl-source-stream");
 var tsify = require("tsify");
@@ -7,10 +6,10 @@ var watchify = require("watchify");
 
 module.exports = PgBuild;
 
-function PgBuild(files) {
+function PgBuild(gulp, files) {
 	if(!(this instanceof PgBuild)) {
 		console.log("Calling constructor");
-		return new PgBuild(files);
+		return new PgBuild(gulp, files);
 	}
 	else {
 		console.log("Is constructor");
