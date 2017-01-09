@@ -4,7 +4,6 @@ var source = require("vinyl-source-stream");
 var tsify = require("tsify");
 var gutil = require("gulp-util");
 var watchify = require("watchify");
-var ts = require("gulp-typescript");
 
 module.exports = PgBuild;
 
@@ -43,13 +42,19 @@ function PgBuild(files) {
 			entries: depFilesCleaned,
 			cache: {},
 			packageCache: {}
-		}).plugin(tsify));
+		}).plugin(tsify).on('error', function(e) {console.error(e);}));
 		
 		var bundler = function() {
 			return w.bundle()
 					.pipe(source(name + '.js'))
-					.pipe(gulp.dest('dist/'));
+					.pipe(gulp.dest('dist/'))
+					.on('error', function(e) {console.error(e);})
+			;
 		};
+		
+		var taskName = 'tsbuilder-' + name;
+		gulp.task(taskName, bundler);
+		this.taskNames.push(taskName);
 		
 		this.bundlers.push(bundler);
 		
@@ -58,11 +63,6 @@ function PgBuild(files) {
 	}
 }
 
-PgBuild.prototype.getTask = function() {
-	var self=this;
-	return function() {
-		for(var i=0, t; t=self.bundlers[i]; ++i) {
-			t();
-		}
-	};
+PgBuild.prototype.getTaskNames = function() {
+	return this.taskNames;
 };
