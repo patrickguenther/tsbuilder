@@ -1,59 +1,88 @@
-var browserify = require("browserify");
-var source = require("vinyl-source-stream");
-var tsify = require("tsify");
-var gutil = require("gulp-util");
-var watchify = require("watchify");
-var gulp = require("gulp");
+var path = require('path');
+var gulp = require('gulp');
+var browserify = require('browserify');
+var tsify = require('tsify');
+var watchify = require('watchify');
+var source = require('vinyl-source-stream');
 
-module.exports = PgBuild;
+var cache = {};
+var packageCache = {};
 
-function PgBuild(name, files) {
-	if(!(this instanceof PgBuild)) {
-		console.log("Calling constructor");
-		return new PgBuild(name, files);
-	}
-	else {
-		console.log("Is constructor");
-	}
-	
-	var depFiles;
-	if(typeof(files) === 'string') {
-		depFiles = [files];
-	}
-	else {
-		depFiles = files;
-	}
-
-	var depFilesCleaned = [];
-	for(var i=0, f; f = depFiles[i]; ++i) {
-		depFilesCleaned.push("src/" + f + ".ts");
-	}
-
-	console.log(depFilesCleaned);
-
-	var w = watchify(browserify({
-		baseDir: '.',
-		debug: true,
-		entries: depFilesCleaned,
-		cache: {},
-		packageCache: {}
-	}).plugin(tsify).on('error', function(e) {console.error(e);}));
-
-	this.bundler = function() {
-		return w.bundle()
-			.pipe(source(name + '.js'))
-			.pipe(gulp.dest('dist/'))
-			.on('error', function(e) {console.error(e);})
-		;
+function createLogger(name) {
+	return function() {
+		var args = ['[' + name + ']'];
+		for(var i = 0; i !== arguments.length; ++i) {
+			args.push(arguments[i]);
+		}
+		console.log.apply(console, args);
 	};
-
-	w.on("update", this.bundler);
-	w.on("log", gutil.log);
 }
 
-PgBuild.prototype.getTask = function() {
-	var self = this;
-	return function() {
-		self.bundler();
+var getBundlerDefaults = {
+	entry: false,
+	baseDir: 'src',
+	logging: createLogger('BUNDLER'),
+	error: createLogger('ERROR'),
+	watch: false,
+	outDir: 'dist'
+};
+
+function getBundler(opts) {
+	var _ = {};
+	for(var i in getBundlerDefaults) {
+		_[i] = opts[i] || getBundlerDefaults[i];
+	}
+	if(!_.entry) {
+		throw new Error('Need an entry file name.');
+	}
+	if(!_.baseDir) {
+		throw new Error('Need a base directory.');
+	}
+	_.entry = path.resolve(_.entry);
+	_.baseDir = path.resolve(_.baseDir);
+	_.outDir = path.resolve(_.outDir);
+	var plugins = [tsify];
+	if(_.watch) plugins.push(watchify);
+	var bundler = browserify({
+		plugin: plugins,
+		extension: ['ts'],
+		entries: [_.entry],
+		baseDir: _.baseDir,
+		cache: cache,
+		packageCache: packageCache
+	});
+	
+	var target = path.basename(_.entry, '.ts') + '.js';
+	var b = {
+		options: _,
+		bundler: bundler,
+		target: target
 	};
+	
+	bundler.on('update', function() {
+		_.logging('Bundling', _.entry);
+		executeBundler(b);
+	});
+	
+	bundler.on('error', function(e) {
+		_.error('Caught error while bundling.', e);
+	});
+	
+	executeBundler(b);
+	
+	return b;
+}
+
+function executeBundler(b) {
+	b.bundler.bundle()
+		.on('error', b.options.error)
+		.pipe(source(b.target))
+		.pipe(gulp.dest(b.options.outDir))
+	;
+}
+
+module.exports = {
+	getBundler: getBundler,
+	createLogger: createLogger,
+	defaultOptions: getBundlerDefaults
 };
