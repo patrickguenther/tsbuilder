@@ -1,6 +1,6 @@
 {
   "name": "tsbuilder",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Streamlining my typescript build pipeline.",
   "main": "index.js",
   "scripts": {
