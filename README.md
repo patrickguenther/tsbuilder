@@ -24,5 +24,5 @@ gulp.task('default', function() {
 });
 ```
 
-The above gulpfile will compile two javascript files 'dist/exmpl.js' and 'dist/exmpl-test.js' from their 
-typescript source files 'src/foo.ts' and 'src/foo.ts', 'src/foo-test.ts' respectively.
+The above gulpfile will compile a javascript file 'dist/index.js' from its 
+typescript source file 'src/index.ts'.
